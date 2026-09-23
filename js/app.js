@@ -11,8 +11,30 @@
     raiz.querySelectorAll("i[data-icon]").forEach(el => { el.outerHTML = icono(el.dataset.icon, Number(el.dataset.size) || 20); });
   }
 
+  // ---------- Almacenamiento local seguro ----------
+  function leer(k) { try { return JSON.parse(localStorage.getItem("guiapy:" + k)); } catch { return null; } }
+  function guardar(k, v) { try { localStorage.setItem("guiapy:" + k, JSON.stringify(v)); } catch {} }
+
+  // ---------- Departamento y ciudad ----------
+  // Ids de la versión anterior → ids nuevos (para quien ya tenía la app)
+  const IDS_VIEJOS = { cde: "ciudad-del-este", sanber: "san-bernardino", pjc: "pedro-juan-caballero", oviedo: "coronel-oviedo" };
+  const ciudadesDe = depto => CIUDADES.filter(c => c.depto === depto);
+  // Un departamento con una sola ciudad (la Capital) la elige directamente;
+  // los demás arrancan en "Todas las ciudades".
+  const ciudadPorDefecto = depto => { const cs = ciudadesDe(depto); return cs.length === 1 ? cs[0].id : null; };
+
+  function zonaInicial() {
+    let ciudad = leer("ciudad"), depto = leer("depto");
+    if (ciudad && !CIUDAD_BY_ID[ciudad]) ciudad = IDS_VIEJOS[ciudad] || null;
+    if (ciudad) depto = CIUDAD_BY_ID[ciudad].depto;
+    if (!DEPTO_BY_ID[depto]) return { depto: "capital", ciudad: "asuncion" };
+    return { depto, ciudad: ciudad || ciudadPorDefecto(depto) };
+  }
+
+  const zona = zonaInicial();
   const estado = {
-    ciudad: leer("ciudad") || "asuncion",
+    depto: zona.depto,
+    ciudad: zona.ciudad,   // null = todo el departamento
     cat: null,
     q: "",
     abierto: false,
@@ -21,9 +43,14 @@
     favs: new Set(leer("favs") || [])
   };
 
-  // ---------- Almacenamiento local seguro ----------
-  function leer(k) { try { return JSON.parse(localStorage.getItem("guiapy:" + k)); } catch { return null; } }
-  function guardar(k, v) { try { localStorage.setItem("guiapy:" + k, JSON.stringify(v)); } catch {} }
+  const nombreZona = () => CIUDAD_BY_ID[estado.ciudad]?.nombre || DEPTO_BY_ID[estado.depto].nombre;
+  const enZona = l => estado.ciudad ? l.ciudad === estado.ciudad : CIUDAD_BY_ID[l.ciudad]?.depto === estado.depto;
+
+  function elegirZona(depto, ciudad) {
+    estado.depto = depto; estado.ciudad = ciudad;
+    guardar("depto", depto); guardar("ciudad", ciudad);
+    pintarUbicacion(); pintarLista();
+  }
 
   // ---------- Utilidades ----------
   const gs = n => "Gs. " + n.toLocaleString("es-PY");
@@ -46,10 +73,10 @@
   function filtrados() {
     const q = norm(estado.q.trim());
     let res = LUGARES.filter(l =>
-      l.ciudad === estado.ciudad &&
+      enZona(l) &&
       (!estado.cat || l.cat === estado.cat) &&
       (!estado.abierto || abierto(l.horario)) &&
-      (!q || norm(l.nombre + " " + l.tipo + " " + (catById[l.cat]?.nombre || "")).includes(q))
+      (!q || norm(l.nombre + " " + l.tipo + " " + (catById[l.cat]?.nombre || "") + " " + (CIUDAD_BY_ID[l.ciudad]?.nombre || "")).includes(q))
     );
     res.forEach(l => l._dist = estado.yo ? distanciaKm(estado.yo, l) : null);
     res.sort((a, b) =>
@@ -67,12 +94,17 @@
     }
     g.innerHTML = html;
   }
-  function pintarCiudad() {
-    const c = CIUDADES.find(c => c.id === estado.ciudad) || CIUDADES[0];
-    $("#cityName").textContent = c.nombre;
-    $("#citySub").textContent = c.sub;
-    $("#citySelect").value = c.id;
-    document.title = `${c.nombre} · ${CONFIG.nombreApp}`;
+  function pintarUbicacion() {
+    const d = DEPTO_BY_ID[estado.depto], c = CIUDAD_BY_ID[estado.ciudad];
+    const ciudades = ciudadesDe(d.id);
+    $("#deptoSelect").value = d.id;
+    $("#citySelect").innerHTML =
+      (ciudades.length > 1 ? `<option value="">Todas las ciudades (${ciudades.length})</option>` : "") +
+      ciudades.map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join("");
+    $("#citySelect").value = c ? c.id : "";
+    $("#cityName").textContent = c ? c.nombre : d.nombre;
+    $("#citySub").textContent = c ? c.sub : `Todas sus ciudades. Tocá el nombre para elegir una.`;
+    document.title = `${nombreZona()} · ${CONFIG.nombreApp}`;
   }
 
   // ---------- Categorías ----------
@@ -82,15 +114,16 @@
   }
 
   // ---------- Tarjeta de lugar ----------
-  function tarjeta(l) {
+  function tarjeta(l, conCiudad = false) {
     const ab = abierto(l.horario);
+    const ciudad = conCiudad ? `<span>${esc(CIUDAD_BY_ID[l.ciudad]?.nombre || "")}</span><span class="sep"></span>` : "";
     return `<button class="place ${l.destacado ? "destacado" : ""}" type="button" data-id="${l.id}">
       ${icono(l.cat, 22)}
       <span>
         ${l.destacado ? `<span class="dest">${icono("estrella", 12)}Destacado</span>` : ""}
         <h3>${esc(l.nombre)}</h3>
         <span class="meta">
-          <span>${esc(l.tipo)}</span><span class="sep"></span>
+          <span>${esc(l.tipo)}</span><span class="sep"></span>${ciudad}
           <span class="${ab ? "abierto" : "cerrado"}">${ab ? "Abierto" : "Cerrado"}</span>
         </span>
       </span>
@@ -100,15 +133,18 @@
 
   function pintarLista() {
     const res = filtrados();
+    const sinFiltros = !estado.cat && !estado.q.trim() && !estado.abierto;
     $("#count").textContent = res.length === 1 ? "1 lugar" : `${res.length} lugares`;
-    $("#list").innerHTML = res.length ? res.map(tarjeta).join("") :
-      `<div class="empty">${icono("buscar", 28)}<strong>No hay lugares con esos filtros</strong>Probá otra categoría, quitá “Abierto ahora” o buscá otra palabra.</div>`;
+    $("#list").innerHTML = res.length ? res.map(l => tarjeta(l, !estado.ciudad)).join("") :
+      sinFiltros
+        ? `<div class="empty">${icono("negocio", 28)}<strong>Todavía no hay lugares cargados en ${esc(nombreZona())}</strong>Estamos sumando ciudades de todo el país. Si tenés un negocio acá, podés ser el primero.<button class="btn btn-sec" type="button" data-goto="negocios">Registrar mi negocio</button></div>`
+        : `<div class="empty">${icono("buscar", 28)}<strong>No hay lugares con esos filtros</strong>Probá otra categoría, quitá “Abierto ahora” o buscá otra palabra.</div>`;
     if (estado.vista === "mapa") pintarMapa(res);
   }
 
   function pintarFavoritos() {
     const res = LUGARES.filter(l => estado.favs.has(l.id));
-    $("#favList").innerHTML = res.length ? res.map(tarjeta).join("") :
+    $("#favList").innerHTML = res.length ? res.map(l => tarjeta(l, true)).join("") :
       `<div class="empty">${icono("guardar", 28)}<strong>Todavía no guardaste lugares</strong>Abrí un lugar y tocá “Guardar” para tenerlo a mano.</div>`;
   }
 
@@ -127,7 +163,7 @@
     iniciarMapa(); if (!mapa) return;
     setTimeout(() => mapa.invalidateSize(), 50);
     capa.clearLayers();
-    const c = CIUDADES.find(c => c.id === estado.ciudad);
+    const c = CIUDAD_BY_ID[estado.ciudad], d = DEPTO_BY_ID[estado.depto];
     const puntos = [];
     res.forEach(l => {
       const marca = L.divIcon({
@@ -141,14 +177,17 @@
     });
     if (estado.yo) puntos.push([estado.yo.lat, estado.yo.lng]);
     if (puntos.length > 1) mapa.fitBounds(puntos, { padding: [40, 40], maxZoom: 15 });
-    else mapa.setView(puntos[0] || [c.lat, c.lng], 14);
+    else if (puntos.length === 1) mapa.setView(puntos[0], 14);
+    else if (c && c.lat != null) mapa.setView([c.lat, c.lng], 14);
+    else mapa.setView([d.lat, d.lng], 9);   // ciudad sin coordenadas o todo el departamento
   }
 
   // ---------- Ficha ----------
   function abrirFicha(id) {
     const l = LUGARES.find(x => x.id === Number(id)); if (!l) return;
     const ab = abierto(l.horario), fav = estado.favs.has(l.id);
-    const ciudad = CIUDADES.find(c => c.id === l.ciudad).nombre;
+    const c = CIUDAD_BY_ID[l.ciudad];
+    const ciudad = c ? c.nombre + (c.depto !== "capital" ? ", " + DEPTO_BY_ID[c.depto].nombre : "") : "";
     const tel = l.telefono ? "595" + l.telefono.replace(/^0/, "") : "";
     const ruta = `https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lng}`;
     const horario = l.horario === "24h" ? "Abierto las 24 horas" : "De " + l.horario.replace("-", " a ") + " h";
@@ -189,7 +228,9 @@
         ${p.precio && CONFIG.lanzamientoGratis ? `<div class="nota">${esc(p.nota)}</div>` : ""}
         <ul>${p.beneficios.map(b => `<li>${icono("check", 18)}<span>${esc(b)}</span></li>`).join("")}</ul>
       </article>`).join("");
-    $("#bizCity").innerHTML = CIUDADES.map(c => `<option value="${esc(c.nombre)}">${esc(c.nombre)}</option>`).join("");
+    // Ciudades agrupadas por departamento
+    $("#bizCity").innerHTML = DEPARTAMENTOS.map(d =>
+      `<optgroup label="${esc(d.nombre)}">${ciudadesDe(d.id).map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join("")}</optgroup>`).join("");
     $("#bizCat").innerHTML = CONFIG.categorias.map(c => `<option>${esc(c.nombre)}</option>`).join("");
     $("#bizPlan").innerHTML = CONFIG.planes.map(p => `<option>${esc(p.nombre)}</option>`).join("");
   }
@@ -203,15 +244,15 @@
     $("#cats").hidden = !filtros; $("#toolbar").hidden = !filtros;
     if (v === "mapa") pintarMapa();
     if (v === "favoritos") pintarFavoritos();
+    if (v === "negocios" && estado.ciudad) $("#bizCity").value = estado.ciudad;
     window.scrollTo({ top: 0 });
   }
 
   // ---------- Eventos ----------
-  $("#citySelect").innerHTML = CIUDADES.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join("");
-  $("#citySelect").addEventListener("change", e => {
-    estado.ciudad = e.target.value; guardar("ciudad", estado.ciudad);
-    pintarCiudad(); pintarLista();
-  });
+  $("#deptoSelect").innerHTML = DEPARTAMENTOS.map(d => `<option value="${d.id}">${esc(d.nombre)}</option>`).join("");
+  $("#deptoSelect").addEventListener("change", e => elegirZona(e.target.value, ciudadPorDefecto(e.target.value)));
+  $("#citySelect").addEventListener("change", e => elegirZona(estado.depto, e.target.value || null));
+
   $("#searchInput").addEventListener("input", e => { estado.q = e.target.value; pintarLista(); });
   $("#openNow").addEventListener("change", e => { estado.abierto = e.target.checked; pintarLista(); });
 
@@ -231,8 +272,14 @@
     txt.textContent = "Ubicando…";
     navigator.geolocation.getCurrentPosition(pos => {
       estado.yo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      const cerca = CIUDADES.reduce((a, c) => distanciaKm(estado.yo, c) < distanciaKm(estado.yo, a) ? c : a);
-      if (distanciaKm(estado.yo, cerca) < 40) { estado.ciudad = cerca.id; pintarCiudad(); }
+      // Busca la ciudad con coordenadas más cercana y pasa a su departamento
+      const cerca = CIUDADES.filter(c => c.lat != null)
+        .reduce((a, c) => distanciaKm(estado.yo, c) < distanciaKm(estado.yo, a) ? c : a);
+      if (distanciaKm(estado.yo, cerca) < 40) {
+        estado.depto = cerca.depto; estado.ciudad = ciudadPorDefecto(cerca.depto);
+        guardar("depto", estado.depto); guardar("ciudad", estado.ciudad);
+        pintarUbicacion();
+      }
       btn.setAttribute("aria-pressed", "true"); txt.textContent = "Más cerca primero";
       iniciarMapa();
       if (mapa) {
@@ -247,6 +294,7 @@
   document.addEventListener("click", e => {
     const card = e.target.closest("[data-id]"); if (card) return abrirFicha(card.dataset.id);
     if (e.target.closest("[data-close]") || e.target.id === "backdrop") return cerrarFicha();
+    const ir = e.target.closest("[data-goto]"); if (ir) return cambiarVista(ir.dataset.goto);
     const fav = e.target.closest("[data-fav]");
     if (fav) {
       const id = Number(fav.dataset.fav);
@@ -269,13 +317,15 @@
   $("#bizForm").addEventListener("submit", e => {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.target));
+    const c = CIUDAD_BY_ID[d.ciudad];
+    const ciudad = c ? `${c.nombre} (${DEPTO_BY_ID[c.depto].nombre})` : d.ciudad;
     const msg = `Hola! Quiero registrar mi negocio en ${CONFIG.nombreApp}:\n\n` +
-      `• Nombre: ${d.nombre}\n• Ciudad: ${d.ciudad}\n• Rubro: ${d.rubro}\n• Dirección: ${d.direccion}\n• WhatsApp: ${d.telefono}\n• Plan: ${d.plan}`;
+      `• Nombre: ${d.nombre}\n• Ciudad: ${ciudad}\n• Rubro: ${d.rubro}\n• Dirección: ${d.direccion}\n• WhatsApp: ${d.telefono}\n• Plan: ${d.plan}`;
     window.open(`https://wa.me/${CONFIG.whatsappAdmin}?text=${encodeURIComponent(msg)}`, "_blank");
   });
 
   // ---------- Inicio ----------
-  iconosEstaticos(); pintarNanduti(); pintarCiudad(); pintarCategorias(); pintarLista(); pintarNegocios();
+  iconosEstaticos(); pintarNanduti(); pintarUbicacion(); pintarCategorias(); pintarLista(); pintarNegocios();
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }

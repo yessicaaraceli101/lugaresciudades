@@ -210,3 +210,25 @@ main { max-width: 780px; margin: 0 auto; padding: 0 16px; }
   font-size: .74rem; font-weight: 600; color: var(--gris-claro);
 }
 .tabbar button.active { color: var(--naranja); }
+
+/* ---- Selector de departamento (pegar al final de css/styles.css) ---- */
+.ubic-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ubic-row .city-label { margin: 0; }
+
+.depto-picker { position: relative; display: inline-flex; align-items: center; }
+.depto-picker select {
+  appearance: none; -webkit-appearance: none;
+  font: inherit; font-size: .85rem; font-weight: 600; color: inherit;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .4);
+  border-radius: 999px;
+  padding: 5px 28px 5px 12px;
+  max-width: 70vw; cursor: pointer;
+}
+.depto-picker select:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+/* Las opciones se ven sobre fondo blanco del sistema */
+.depto-picker option { color: #1d1d1d; }
+.depto-picker .i { position: absolute; right: 9px; pointer-events: none; }
+
+/* Botón dentro del estado vacío */
+.empty .btn { margin-top: 12px; }
