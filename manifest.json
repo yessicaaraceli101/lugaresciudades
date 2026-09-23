@@ -1,0 +1,13 @@
+{
+  "name": "Guía PY · Todo Paraguay en un lugar",
+  "short_name": "Guía PY",
+  "description": "Dónde comer, farmacias, turismo y más en cada ciudad de Paraguay.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAFAF7",
+  "theme_color": "#F26A1B",
+  "lang": "es-PY",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

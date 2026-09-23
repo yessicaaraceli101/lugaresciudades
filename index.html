@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F26A1B">
+  <meta name="description" content="Todo lo que hay en tu ciudad: dónde comer, farmacias, lugares turísticos y más, en todo Paraguay.">
+  <title>Guía PY · Todo Paraguay en un lugar</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="hero">
+    <svg class="nanduti" viewBox="0 0 200 200" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="1.2">
+        <circle cx="100" cy="100" r="18"/><circle cx="100" cy="100" r="42"/>
+        <circle cx="100" cy="100" r="66"/><circle cx="100" cy="100" r="92"/>
+      </g>
+      <g id="rayos" stroke="currentColor" stroke-width=".8"></g>
+    </svg>
+    <div class="hero-inner">
+      <div class="brand"><img src="icons/icon.svg" alt="" width="26" height="26"><span>Guía PY</span></div>
+      <label for="citySelect" class="city-label">Estás en</label>
+      <div class="city-picker">
+        <select id="citySelect" aria-label="Elegí tu ciudad"></select>
+        <span class="city-name" id="cityName">Asunción</span>
+        <i data-icon="chevron" data-size="26"></i>
+      </div>
+      <p class="city-sub" id="citySub"></p>
+      <div class="search">
+        <i data-icon="buscar"></i>
+        <input id="searchInput" type="search" placeholder="Buscá un lugar, rubro o comida" autocomplete="off">
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <nav class="cats" id="cats" aria-label="Categorías"></nav>
+
+    <div class="toolbar" id="toolbar">
+      <label class="chip-toggle">
+        <input type="checkbox" id="openNow">
+        <i data-icon="reloj" data-size="16"></i><span>Abierto ahora</span>
+      </label>
+      <button class="chip-toggle" id="nearMe" type="button" aria-pressed="false">
+        <i data-icon="ubicacion" data-size="16"></i><span>Cerca de mí</span>
+      </button>
+      <span class="count" id="count"></span>
+    </div>
+
+    <section class="view" id="view-explorar">
+      <div class="list" id="list"></div>
+    </section>
+
+    <section class="view" id="view-mapa" hidden>
+      <div id="map" role="application" aria-label="Mapa de lugares"></div>
+    </section>
+
+    <section class="view" id="view-favoritos" hidden>
+      <h2 class="section-title">Guardados</h2>
+      <div class="list" id="favList"></div>
+    </section>
+
+    <section class="view" id="view-negocios" hidden>
+      <div class="biz-head">
+        <h2>Tu negocio en el mapa de todo Paraguay</h2>
+        <p>Registrarte es gratis durante el lanzamiento. Cuando quieras más clientes, pasás a un plan destacado.</p>
+      </div>
+      <div class="plans" id="plans"></div>
+
+      <form class="biz-form" id="bizForm">
+        <h3>Registrá tu negocio</h3>
+        <label>Nombre del negocio<input name="nombre" required></label>
+        <div class="row2">
+          <label>Ciudad<select name="ciudad" id="bizCity"></select></label>
+          <label>Rubro<select name="rubro" id="bizCat"></select></label>
+        </div>
+        <label>Dirección<input name="direccion" required></label>
+        <div class="row2">
+          <label>WhatsApp<input name="telefono" type="tel" placeholder="0981 123 456" required></label>
+          <label>Plan<select name="plan" id="bizPlan"></select></label>
+        </div>
+        <button class="btn btn-primary" type="submit"><i data-icon="mensaje" data-size="18"></i>Enviar por WhatsApp</button>
+        <p class="hint">Se abre WhatsApp con tus datos listos para enviar.</p>
+      </form>
+    </section>
+  </main>
+
+  <div class="sheet-backdrop" id="backdrop" hidden></div>
+  <aside class="sheet" id="sheet" aria-modal="true" role="dialog" aria-labelledby="sheetTitle" hidden></aside>
+
+  <nav class="tabbar" aria-label="Secciones">
+    <button data-view="explorar" class="active" type="button"><i data-icon="lista" data-size="22"></i>Explorar</button>
+    <button data-view="mapa" type="button"><i data-icon="mapa" data-size="22"></i>Mapa</button>
+    <button data-view="favoritos" type="button"><i data-icon="guardar" data-size="22"></i>Guardados</button>
+    <button data-view="negocios" type="button"><i data-icon="negocio" data-size="22"></i>Negocios</button>
+  </nav>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
