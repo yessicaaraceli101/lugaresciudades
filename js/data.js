@@ -117,7 +117,8 @@ const CIUDADES_INFO = {
   "salto-del-guaira": { lat: -24.0625, lng: -54.3083 },
   "villa-hayes": { lat: -25.0930, lng: -57.5236 },
   "filadelfia": { lat: -22.3500, lng: -60.0333 },
-  "fuerte-olimpo": { lat: -21.0417, lng: -57.8733 }
+  "fuerte-olimpo": { lat: -21.0417, lng: -57.8733 },
+  "valenzuela": { lat: -25.5942, lng: -56.8679 }
 };
 
 // ---- Construcción de la lista de ciudades (no hace falta tocar) ----
@@ -162,6 +163,26 @@ const TURISMO = [
   { ciudad: "pedro-juan-caballero", nombre: "Parque Nacional Cerro Corá", lat: -22.6500, lng: -56.0170, desc: "Sitio histórico del final de la Guerra Grande, rodeado de naturaleza.", horario: "07:00-17:00" }
 ];
 
+// ---- Lugares y negocios REALES (cargalos acá) ----
+// id: un número único que no se repita (seguí 1002, 1003…)
+// cat: comer, farmacia, turismo, hotel, super, salud, cajero o combustible
+// horario: "07:00-19:00" o "24h"
+// telefono: celular sin espacios ("0981123456"); si es fijo, dejalo vacío ("")
+const NEGOCIOS = [
+  {
+    id: 1001,
+    ciudad: "valenzuela",
+    cat: "salud",
+    nombre: "Centro de Salud de Valenzuela",
+    tipo: "Centro de salud",
+    lat: -25.594204, lng: -56.867949,
+    direccion: "",
+    telefono: "",
+    horario: "07:00-19:00",   // ← confirmar el horario real
+    desc: "Centro de salud público de Valenzuela."
+  }
+];
+
 // ---- Generador de comercios de ejemplo (siempre los mismos) ----
 const NOMBRES = {
   comer: ["Lomitería Don Pepe", "Parrillada La Chacra", "Pizzería Napoli", "Copetín Mbaretē", "Chipería La Abuela", "Bar El Rincón", "Sushi Kōi", "Empanadas Ña Rosa"],
@@ -193,6 +214,11 @@ function generarLugares() {
   TURISMO.forEach(t => lugares.push({
     id: id++, ciudad: t.ciudad, cat: "turismo", nombre: t.nombre, tipo: "Lugar turístico",
     lat: t.lat, lng: t.lng, desc: t.desc, horario: t.horario, direccion: "", telefono: "", destacado: false, ejemplo: false
+  }));
+
+  // Lugares y negocios reales
+  NEGOCIOS.forEach(n => lugares.push({
+    ...n, telefono: n.telefono || "", direccion: n.direccion || "", destacado: !!n.destacado, ejemplo: false
   }));
 
   // Solo las ciudades marcadas con demo: true reciben comercios de ejemplo
